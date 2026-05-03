@@ -2,9 +2,10 @@
 .terraform/
 *.tfstate
 *.tfstate.*
+*.tfplan
 crash.log
 
-# Local values (ممكن تحط فيها secrets بعدين)
+# Local values
 terraform.tfvars
 *.tfvars
 
