@@ -1,0 +1,13 @@
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+
+# Local values (ممكن تحط فيها secrets بعدين)
+terraform.tfvars
+*.tfvars
+
+# OS files
+.DS_Store
+Thumbs.db
