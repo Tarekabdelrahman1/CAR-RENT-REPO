@@ -31,3 +31,29 @@ module "network" {
     "us-east-1b" = "10.0.32.0/24"
   }
 }
+
+module "security" {
+  source = "../../modules/security"
+
+  project_name = "car-rent"
+  environment  = "dev"
+
+  vpc_id = module.network.vpc_id
+
+  create_rds_sg = true
+
+  extra_tags = {
+    Team = "DevOps-Team"
+  }
+}
+
+module "web_tier" {
+  source = "../../modules/web_tier"
+
+  project_name = "car-rent"
+  environment  = "dev"
+
+  vpc_id             = module.network.vpc_id
+  private_subnet_ids = module.network.private_web_subnet_ids
+  web_sg_id          = module.security.web_tier_sg_id
+}

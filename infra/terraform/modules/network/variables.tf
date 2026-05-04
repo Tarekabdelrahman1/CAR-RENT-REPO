@@ -12,32 +12,28 @@ variable "vpc_cidr" {
   description = "CIDR block for the VPC"
   type        = string
 }
-variable "public_1a_cidr" {
-  description = "CIDR block for public subnet 1a"
-  type        = string
+
+variable "azs" {
+  description = "Availability zones used by the network module"
+  type        = list(string)
 }
 
-variable "public_1b_cidr" {
-  description = "CIDR block for public subnet 1b"
-  type        = string
+variable "public_subnet_cidrs" {
+  description = "CIDR blocks for public subnets"
+  type        = list(string)
 }
 
-variable "private_1a_cidr" {
-  description = "CIDR block for private subnet 1a"
-  type        = string
+variable "private_web_subnets" {
+  description = "Private web tier subnets as AZ to CIDR map"
+  type        = map(string)
 }
 
-variable "private_1b_cidr" {
-  description = "CIDR block for private subnet 1b"
-  type        = string
+variable "private_app_subnets" {
+  description = "Private app tier subnets as AZ to CIDR map"
+  type        = map(string)
 }
 
-variable "az_1a" {
-  description = "Availability Zone 1a"
-  type        = string
-}
-
-variable "az_1b" {
-  description = "Availability Zone 1b"
-  type        = string
+variable "private_db_subnets" {
+  description = "Private database tier subnets as AZ to CIDR map"
+  type        = map(string)
 }
