@@ -52,6 +52,7 @@ module "web_tier" {
 
   project_name = "car-rent"
   environment  = "dev"
+  aws_region   = "us-east-1"
 
   vpc_id             = module.network.vpc_id
   private_subnet_ids = module.network.private_web_subnet_ids
