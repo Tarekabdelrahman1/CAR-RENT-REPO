@@ -18,3 +18,7 @@ variable "private_subnet_ids" {
 variable "web_sg_id" {
   type = string
 }
+variable "aws_region" {
+  description = "AWS region used to select the AMI"
+  type        = string
+}

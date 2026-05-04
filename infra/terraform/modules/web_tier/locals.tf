@@ -17,11 +17,11 @@ locals {
   # by default it will use dev enviroment
   current_setup = lookup(local.env_config, var.environment, local.env_config["dev"])
 
-# AMi to be updated
+  # AMi to be updated
   region_amis = {
-    "us-east-1"  = "ami-0c7217cdde317cfec" 
-    "eu-west-1"  = "ami-01dd271720c1ba44f" 
-    "ap-south-1" = "ami-02eb7a4783e7e9317" 
+    "us-east-1"  = "ami-0c7217cdde317cfec"
+    "eu-west-1"  = "ami-01dd271720c1ba44f"
+    "ap-south-1" = "ami-02eb7a4783e7e9317"
   }
 
   current_ami = lookup(local.region_amis, var.aws_region, local.region_amis["us-east-1"])

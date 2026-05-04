@@ -1,7 +1,7 @@
 resource "aws_security_group" "public_alb_sg" {
   name   = "${local.prefix}-public-alb-sg"
   vpc_id = var.vpc_id
- 
+
   dynamic "ingress" {
     for_each = local.alb_ports
     content {
@@ -83,8 +83,8 @@ resource "aws_security_group" "app_tier_sg" {
 }
 
 resource "aws_security_group" "rds_sg" {
-  count  = var.create_rds_sg ? 1 : 0
-  
+  count = var.create_rds_sg ? 1 : 0
+
   name   = "${local.prefix}-rds-sg"
   vpc_id = var.vpc_id
 
