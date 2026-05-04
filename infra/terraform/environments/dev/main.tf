@@ -6,12 +6,28 @@ module "network" {
 
   vpc_cidr = "10.0.0.0/16"
 
-  public_1a_cidr = "10.0.1.0/24"
-  public_1b_cidr = "10.0.2.0/24"
+  azs = [
+    "us-east-1a",
+    "us-east-1b"
+  ]
 
-  private_1a_cidr = "10.0.11.0/24"
-  private_1b_cidr = "10.0.12.0/24"
+  public_subnet_cidrs = [
+    "10.0.1.0/24",
+    "10.0.2.0/24"
+  ]
 
-  az_1a = "us-east-1a"
-  az_1b = "us-east-1b"
+  private_web_subnets = {
+    "us-east-1a" = "10.0.11.0/24"
+    "us-east-1b" = "10.0.12.0/24"
+  }
+
+  private_app_subnets = {
+    "us-east-1a" = "10.0.21.0/24"
+    "us-east-1b" = "10.0.22.0/24"
+  }
+
+  private_db_subnets = {
+    "us-east-1a" = "10.0.31.0/24"
+    "us-east-1b" = "10.0.32.0/24"
+  }
 }
