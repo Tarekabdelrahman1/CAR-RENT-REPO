@@ -15,3 +15,16 @@ module "network" {
   az_1a = "us-east-1a"
   az_1b = "us-east-1b"
 }
+
+module "security" {
+  source = "../../modules/security"
+
+  project_name = "car-rent"
+  environment  = "dev"
+
+  vpc_id = module.network.vpc_id
+
+  create_rds_sg = true
+  extra_tags = {
+    "Team" = "DevOps-Team"
+  }
