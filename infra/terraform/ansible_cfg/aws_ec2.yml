@@ -1,0 +1,11 @@
+plugin: amazon.aws.aws_ec2
+regions:
+  - us-east-1
+filters:
+  instance-state-name: running
+hostnames:
+  - instance-id
+keyed_groups:
+  - key: tags.Tier
+    prefix: tier
+    separator: "_"
