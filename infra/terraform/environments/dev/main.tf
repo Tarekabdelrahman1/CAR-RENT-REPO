@@ -70,3 +70,14 @@ module "public_alb" {
   target_ids  = module.web_tier.web_instance_ids
   target_port = 80
 }
+module "app_tier" {
+  source = "../../modules/app_tier"
+
+  project_name = "car-rent"
+  environment  = "dev"
+  aws_region   = "us-east-1"
+
+  vpc_id             = module.network.vpc_id
+  private_subnet_ids = module.network.private_app_subnet_ids
+  app_sg_id          = module.security.app_tier_sg_id
+}
