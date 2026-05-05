@@ -58,3 +58,15 @@ module "web_tier" {
   private_subnet_ids = module.network.private_web_subnet_ids
   web_sg_id          = module.security.web_tier_sg_id
 }
+module "public_alb" {
+  source = "../../modules/public_alb"
+
+  project_name      = "car-rent"
+  environment       = "dev"
+  vpc_id            = module.network.vpc_id
+  public_subnet_ids = module.network.public_subnet_ids
+  alb_sg_id         = module.security.public_alb_sg_id
+
+  target_ids  = module.web_tier.web_instance_ids
+  target_port = 80
+}
