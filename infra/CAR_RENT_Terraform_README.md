@@ -2,7 +2,7 @@
 
 ## Overview
 
-This README documents the current Terraform infrastructure for the CAR-RENT project and explains how the Ansible engineer should integrate with it.
+This README documents the current Terraform infrastructure for the CAR-RENT project.
 
 The project is built as a multi-tier AWS architecture using reusable Terraform modules.
 
@@ -22,8 +22,6 @@ Secrets Manager
 Private RDS PostgreSQL
 ```
 
----
-
 ## Traffic Flow
 
 ```text
@@ -39,8 +37,6 @@ Private App EC2
   ↓ PostgreSQL :5432
 Private RDS PostgreSQL
 ```
-
----
 
 ## Repository Structure
 
@@ -61,28 +57,24 @@ infra/terraform/
     ├── web_tier/
     ├── app_tier/
     ├── database/
-    ├── iam/
-    └── ansible_ssm/
+    └── iam/
 ```
 
 ---
 
-# Environment
+# Dev Environment
 
-## dev
+The `dev` environment connects all Terraform modules together.
 
-The `dev` environment wires all Terraform modules together.
+It creates:
 
-Main responsibilities:
-
-- Create the VPC and subnets
-- Create security groups
-- Create Web and App EC2 instances
-- Create Public and Internal ALBs
-- Create private RDS PostgreSQL
-- Create IAM roles and instance profiles
-- Create the Ansible SSM payload bucket
-- Store Terraform state in S3 remote backend
+- VPC and subnets
+- Security groups
+- Web and App EC2 instances
+- Public and Internal Application Load Balancers
+- Private RDS PostgreSQL database
+- IAM roles and instance profiles
+- Remote Terraform state configuration
 
 Provider configuration:
 
@@ -111,21 +103,7 @@ terraform {
 }
 ```
 
-## Why S3 Lockfile Instead of DynamoDB
-
-The backend uses native S3 lockfile locking:
-
-```hcl
-use_lockfile = true
-```
-
-This avoids the older DynamoDB state-locking table approach.
-
-The S3 state bucket must exist before running:
-
-```bash
-terraform init
-```
+`use_lockfile = true` enables native S3 state locking and replaces the older DynamoDB lock table approach.
 
 The backend bucket should have:
 
@@ -141,19 +119,13 @@ Public access blocked
 
 ## 1. network
 
-**Path:**
-
-```text
-infra/terraform/modules/network
-```
-
-## Purpose
+**Path:** `infra/terraform/modules/network`
 
 Creates the base VPC networking layer.
 
-## Resources
+Resources:
 
-- `aws_vpc`
+- VPC
 - Public subnets
 - Private Web subnets
 - Private App subnets
@@ -165,36 +137,29 @@ Creates the base VPC networking layer.
 - Private route table
 - Route table associations
 
-## CIDR Layout
+CIDR layout:
 
 ```text
-VPC:
-- 10.0.0.0/16
+VPC: 10.0.0.0/16
 
-Public subnets:
+Public:
 - 10.0.1.0/24
 - 10.0.2.0/24
 
-Private Web subnets:
+Private Web:
 - 10.0.11.0/24
 - 10.0.12.0/24
 
-Private App subnets:
+Private App:
 - 10.0.21.0/24
 - 10.0.22.0/24
 
-Private DB subnets:
+Private DB:
 - 10.0.31.0/24
 - 10.0.32.0/24
 ```
 
-## Notes
-
-Private Web and App subnets are associated with the private route table that routes outbound internet traffic through NAT Gateway.
-
-The DB subnets are created separately for the RDS subnet group.
-
-## Outputs
+Outputs:
 
 ```text
 vpc_id
@@ -209,17 +174,11 @@ nat_gateway_id
 
 ## 2. security
 
-**Path:**
+**Path:** `infra/terraform/modules/security`
 
-```text
-infra/terraform/modules/security
-```
+Creates security groups for all tiers.
 
-## Purpose
-
-Creates the security groups that control traffic between all tiers.
-
-## Security Group Flow
+Security flow:
 
 ```text
 Public ALB SG
@@ -233,12 +192,11 @@ App Tier SG
 RDS SG
 ```
 
-## Rules
+Rules:
 
 ```text
 Public ALB SG:
-- inbound 80 from 0.0.0.0/0
-- inbound 443 from 0.0.0.0/0
+- inbound 80/443 from 0.0.0.0/0
 - outbound all
 
 Web Tier SG:
@@ -258,7 +216,7 @@ RDS SG:
 - outbound all
 ```
 
-## Outputs
+Outputs:
 
 ```text
 public_alb_sg_id
@@ -272,24 +230,11 @@ rds_sg_id
 
 ## 3. public_alb
 
-**Path:**
+**Path:** `infra/terraform/modules/public_alb`
 
-```text
-infra/terraform/modules/public_alb
-```
+Creates the public Application Load Balancer.
 
-## Purpose
-
-Creates the public Application Load Balancer that receives traffic from users and forwards it to the private Web Tier.
-
-## Resources
-
-- Public Application Load Balancer
-- Web target group
-- HTTP listener on port 80
-- Target group attachments for Web EC2 instances
-
-## Flow
+Flow:
 
 ```text
 Internet
@@ -299,17 +244,14 @@ Public ALB :80
 Web Tier :80
 ```
 
-## Important Settings
+Resources:
 
-```text
-ALB visibility: public
-ALB type: application
-Listener: HTTP 80
-Target type: instance
-Target port: 80
-```
+- Public Application Load Balancer
+- Web target group
+- HTTP listener on port 80
+- Target group attachments for Web EC2 instances
 
-## Outputs
+Outputs:
 
 ```text
 alb_arn
@@ -323,27 +265,19 @@ http_listener_arn
 
 ## 4. web_tier
 
-**Path:**
+**Path:** `infra/terraform/modules/web_tier`
 
-```text
-infra/terraform/modules/web_tier
-```
+Creates private EC2 instances for the Web Tier.
 
-## Purpose
-
-Creates EC2 instances for the private Web Tier.
-
-## Responsibilities
+Responsibilities:
 
 - Receive traffic from the Public ALB
-- Serve the frontend on port 80
+- Serve frontend traffic on port 80
 - Forward backend/API traffic to the Internal ALB
-- Store the Internal ALB URL locally for the app deployment
-- Attach an IAM instance profile for SSM access
+- Store the Internal ALB URL locally
+- Attach IAM instance profile for SSM access
 
-## EC2 Sizing
-
-The module uses environment-based sizing:
+Environment-based sizing:
 
 ```text
 dev  -> t3.micro, 1 instance
@@ -351,35 +285,27 @@ test -> t3.small, 2 instances
 prod -> t3.medium, 3 instances
 ```
 
-## Backend URL Handoff
-
-Terraform writes the Internal ALB URL to:
+Terraform writes the backend URL to:
 
 ```text
 /etc/car-rent-web.env
 ```
 
-Expected file content:
+Expected content:
 
 ```bash
 APP_BACKEND_URL=http://internal-alb-dns-name
 ```
 
-This file is used later by Ansible or the application runtime so that the Web Tier knows where to send backend/API requests.
-
-## IAM
-
-The Web Tier uses a dedicated IAM instance profile.
-
-Permissions:
+IAM permissions:
 
 ```text
 AmazonSSMManagedInstanceCore
 ```
 
-The Web Tier does not have permission to read database secrets.
+The Web Tier does not have database secret access.
 
-## Outputs
+Outputs:
 
 ```text
 web_instance_ids
@@ -390,24 +316,11 @@ web_private_ips
 
 ## 5. internal_alb
 
-**Path:**
+**Path:** `infra/terraform/modules/internal_alb`
 
-```text
-infra/terraform/modules/internal_alb
-```
+Creates an internal Application Load Balancer between Web and App.
 
-## Purpose
-
-Creates an internal Application Load Balancer between the Web Tier and App Tier.
-
-## Resources
-
-- Internal Application Load Balancer
-- App target group
-- HTTP listener on port 80
-- Target group attachments for App EC2 instances
-
-## Flow
+Flow:
 
 ```text
 Web Tier
@@ -417,17 +330,14 @@ Internal ALB
 App Tier
 ```
 
-## Important Settings
+Resources:
 
-```text
-ALB visibility: internal
-ALB type: application
-Listener: HTTP 80
-Target type: instance
-Target port: 8000
-```
+- Internal Application Load Balancer
+- App target group
+- HTTP listener on port 80
+- Target group attachments for App EC2 instances
 
-## Outputs
+Outputs:
 
 ```text
 internal_alb_arn
@@ -441,27 +351,19 @@ http_listener_arn
 
 ## 6. app_tier
 
-**Path:**
+**Path:** `infra/terraform/modules/app_tier`
 
-```text
-infra/terraform/modules/app_tier
-```
+Creates private EC2 instances for the App Tier.
 
-## Purpose
-
-Creates EC2 instances for the private App Tier.
-
-## Responsibilities
+Responsibilities:
 
 - Receive traffic from the Internal ALB
 - Run backend/API workload on port 8000
 - Connect to RDS PostgreSQL
 - Read DB credentials from Secrets Manager using IAM
-- Store DB connection metadata locally for the app deployment
+- Store DB connection metadata locally
 
-## EC2 Sizing
-
-The module uses environment-based sizing:
+Environment-based sizing:
 
 ```text
 dev  -> t3.micro, 1 instance
@@ -469,15 +371,13 @@ test -> t3.small, 2 instances
 prod -> t3.medium, 3 instances
 ```
 
-## Database Handoff File
-
-Terraform writes database connection metadata to:
+Terraform writes database metadata to:
 
 ```text
 /etc/car-rent-app.env
 ```
 
-Expected file content:
+Expected content:
 
 ```bash
 DB_SECRET_ARN=arn:aws:secretsmanager:...
@@ -486,26 +386,9 @@ DB_NAME=carrent
 DB_PORT=5432
 ```
 
-## Important Security Note
+The database password is not stored in Git, Terraform code, user data, or plain text variables. The App Tier receives only metadata and uses its IAM role to read credentials from Secrets Manager.
 
-The database password is not written to EC2 user data, Git, Terraform code, or plain text variables.
-
-The App Tier receives:
-
-```text
-DB_SECRET_ARN
-DB_HOST
-DB_NAME
-DB_PORT
-```
-
-Then the application uses the App EC2 IAM role to read the actual username/password from AWS Secrets Manager at runtime.
-
-## IAM
-
-The App Tier uses a dedicated IAM instance profile.
-
-Permissions:
+IAM permissions:
 
 ```text
 AmazonSSMManagedInstanceCore
@@ -513,9 +396,7 @@ secretsmanager:GetSecretValue
 secretsmanager:DescribeSecret
 ```
 
-Secret access is restricted to the RDS master user secret ARN.
-
-## Outputs
+Outputs:
 
 ```text
 app_instance_ids
@@ -526,23 +407,17 @@ app_private_ips
 
 ## 7. database
 
-**Path:**
-
-```text
-infra/terraform/modules/database
-```
-
-## Purpose
+**Path:** `infra/terraform/modules/database`
 
 Creates the private RDS PostgreSQL database layer.
 
-## Resources
+Resources:
 
 - DB subnet group
 - RDS PostgreSQL instance
 - AWS-managed master user password through Secrets Manager
 
-## Main Settings
+Settings:
 
 ```text
 Engine: PostgreSQL
@@ -558,29 +433,15 @@ Deletion protection: disabled for dev
 Final snapshot on destroy: skipped for dev
 ```
 
-## Secrets Manager Integration
-
 The database uses:
 
 ```hcl
 manage_master_user_password = true
 ```
 
-This makes AWS RDS create and manage the master password in AWS Secrets Manager.
+This makes RDS create and manage the master password in Secrets Manager.
 
-## Why This Matters
-
-This avoids storing DB passwords in:
-
-```text
-Terraform code
-Git history
-tfvars files
-EC2 user data
-Plain text shell scripts
-```
-
-## Outputs
+Outputs:
 
 ```text
 db_endpoint
@@ -593,21 +454,11 @@ db_master_user_secret_arn
 
 ## 8. iam
 
-**Path:**
-
-```text
-infra/terraform/modules/iam
-```
-
-## Purpose
+**Path:** `infra/terraform/modules/iam`
 
 Creates IAM roles, policies, and instance profiles for App and Web EC2 instances.
 
-## App EC2 IAM Role
-
-The App role is used by App EC2 instances.
-
-Permissions:
+App EC2 role:
 
 ```text
 AmazonSSMManagedInstanceCore
@@ -615,34 +466,22 @@ secretsmanager:GetSecretValue
 secretsmanager:DescribeSecret
 ```
 
-The Secrets Manager policy is scoped only to:
+Secret access is scoped only to the RDS secret ARN.
 
-```text
-module.database.db_master_user_secret_arn
-```
-
-## Web EC2 IAM Role
-
-The Web role is used by Web EC2 instances.
-
-Permissions:
+Web EC2 role:
 
 ```text
 AmazonSSMManagedInstanceCore
 ```
 
-The Web Tier does not need access to the RDS secret.
-
-## Design Principle
+Design:
 
 ```text
 App Role = SSM + DB secret access
 Web Role = SSM only
 ```
 
-This follows least privilege.
-
-## Outputs
+Outputs:
 
 ```text
 app_instance_profile_name
@@ -655,45 +494,29 @@ web_ec2_role_arn
 
 ---
 
-## 9. ansible_ssm
+# Shared Prerequisites Outside the dev Terraform Stack
 
-**Path:**
+## Ansible SSM Payload Bucket
+
+The Ansible SSM payload bucket is created outside the Terraform `dev` stack.
+
+Current bucket:
 
 ```text
-infra/terraform/modules/ansible_ssm
+car-rent-dev-ansible-ssm-emad
 ```
 
-## Purpose
+This bucket is a shared tooling resource used by Ansible to upload temporary module payloads when connecting through the AWS SSM connection plugin.
 
-Creates the S3 bucket used by Ansible when connecting to private EC2 instances through AWS Systems Manager.
+It is intentionally outside the dev Terraform stack, so `terraform destroy` removes only the application infrastructure and does not delete the shared Ansible bucket.
 
-## Why This Bucket Exists
-
-Ansible's SSM connection plugin uploads temporary module payloads to S3 before executing them on the target instances through SSM.
-
-## Resources
-
-- S3 bucket
-- Public access block
-- Server-side encryption using AES256
-- Versioning suspended
-
-## Versioning Design
+Recommended bucket configuration:
 
 ```text
-Terraform state bucket:
-- Versioning enabled
-
-Ansible SSM payload bucket:
-- Versioning suspended
-```
-
-The Ansible payload bucket keeps versioning suspended because Ansible uploads temporary execution files and deletes them after use. If versioning is enabled, deleted temporary payloads can remain in S3 version history.
-
-## Output
-
-```text
-ansible_ssm_bucket_name
+Public access blocked
+Server-side encryption enabled
+Versioning suspended
+Lifecycle cleanup enabled for temporary payloads
 ```
 
 ---
@@ -706,59 +529,14 @@ Run commands from:
 infra/terraform/environments/dev
 ```
 
-## Initialize
-
 ```bash
 terraform init
-```
-
-## Format
-
-```bash
 terraform fmt -recursive
-```
-
-## Validate
-
-```bash
 terraform validate
-```
-
-## Plan
-
-```bash
 terraform plan
-```
-
-## Apply
-
-```bash
 terraform apply
-```
-
-## Check State
-
-```bash
+terraform destroy
 terraform state list
-```
-
----
-
-# Current Infrastructure Status
-
-```text
-Network module completed
-Security module completed
-Public ALB module completed
-Web Tier module completed
-Internal ALB module completed
-App Tier module completed
-Database module completed
-IAM module completed
-Ansible SSM bucket completed
-Terraform remote backend completed
-SSM access tested
-Ansible ping over SSM tested
 ```
 
 ---
@@ -792,3 +570,267 @@ Web Tier has no DB secret access.
 ```
 
 ---
+
+---
+
+# Ansible Integration Handoff
+
+This infrastructure is prepared to be managed by Ansible through AWS Systems Manager.
+
+The target EC2 instances are private and should not be accessed through SSH or a bastion host.
+
+## What Is Already Prepared
+
+The infrastructure provides:
+
+```text
+Private EC2 instances
+IAM instance profiles with SSM access
+Outbound internet access through NAT
+AWS Systems Manager connectivity
+S3 bucket for Ansible SSM temporary payloads
+Environment metadata files written by Terraform
+```
+
+Ansible should use AWS SSM as the connection method.
+
+```text
+Ansible Control Node
+  ↓
+AWS Systems Manager
+  ↓
+Private EC2 Instances
+```
+
+---
+
+## Required Tools
+
+Install the following tools on the machine that will run Ansible:
+
+```text
+Ansible
+AWS CLI
+AWS Session Manager Plugin
+amazon.aws Ansible collection
+boto3
+botocore
+```
+
+Install Python dependencies:
+
+```bash
+pip install boto3 botocore
+```
+
+Install the AWS Ansible collection:
+
+```bash
+ansible-galaxy collection install amazon.aws
+```
+
+Verify AWS access:
+
+```bash
+aws sts get-caller-identity --profile project
+```
+
+---
+
+## AWS Profile
+
+Use this AWS CLI profile:
+
+```text
+project
+```
+
+Region:
+
+```text
+us-east-1
+```
+
+---
+
+## SSM Connectivity Check
+
+Before running any Ansible playbooks, confirm that the EC2 instances are visible in AWS Systems Manager:
+
+```bash
+aws ssm describe-instance-information \
+  --region us-east-1 \
+  --profile project \
+  --query "InstanceInformationList[*].[InstanceId,ComputerName,PingStatus]" \
+  --output table
+```
+
+Expected result:
+
+```text
+Instances should appear as Online
+```
+
+If instances are not online, check:
+
+```text
+IAM instance profile
+AmazonSSMManagedInstanceCore policy
+SSM Agent status
+Private subnet outbound access through NAT
+AWS profile and region
+```
+
+---
+
+## Ansible SSM Payload Bucket
+
+Use this S3 bucket for Ansible SSM temporary payloads:
+
+```text
+car-rent-dev-ansible-ssm-emad
+```
+
+This bucket is created outside the Terraform dev stack and should be reused by Ansible.
+
+It is not part of `terraform destroy`.
+
+---
+
+## Inventory Setup
+
+Create an Ansible dynamic inventory file:
+
+```text
+ansible/inventories/aws_ec2.yml
+```
+
+Example:
+
+```yaml
+plugin: amazon.aws.aws_ec2
+
+regions:
+  - us-east-1
+
+profile: project
+
+filters:
+  tag:Environment: dev
+  instance-state-name: running
+
+hostnames:
+  - instance-id
+
+compose:
+  ansible_host: instance_id
+  ansible_connection: "'amazon.aws.aws_ssm'"
+  ansible_aws_ssm_region: "'us-east-1'"
+  ansible_aws_ssm_profile: "'project'"
+  ansible_aws_ssm_bucket_name: "'car-rent-dev-ansible-ssm-emad'"
+  ansible_python_interpreter: "'/usr/bin/python3'"
+
+strict: false
+```
+
+This inventory discovers the running EC2 instances in the `dev` environment and connects to them through SSM.
+
+---
+
+## Validate Inventory
+
+Run:
+
+```bash
+ansible-inventory -i inventories/aws_ec2.yml --graph
+```
+
+This should return the discovered EC2 instances.
+
+---
+
+## Test Ansible Connection
+
+Run:
+
+```bash
+ansible all -i inventories/aws_ec2.yml -m ping
+```
+
+Expected result:
+
+```text
+SUCCESS => {
+  "ping": "pong"
+}
+```
+
+This confirms that:
+
+```text
+AWS credentials are valid
+Dynamic inventory can discover EC2 instances
+SSM can reach the private instances
+The S3 payload bucket works
+Ansible can execute commands without SSH
+```
+
+---
+
+## Useful Test Commands
+
+Check hostnames:
+
+```bash
+ansible all -i inventories/aws_ec2.yml -m command -a "hostname"
+```
+
+Check operating system information:
+
+```bash
+ansible all -i inventories/aws_ec2.yml -m command -a "cat /etc/os-release"
+```
+
+Check Terraform-provided environment files:
+
+```bash
+ansible all -i inventories/aws_ec2.yml -m shell -a "ls -l /etc/car-rent-*.env || true"
+```
+
+Read environment metadata:
+
+```bash
+ansible all -i inventories/aws_ec2.yml -m shell -a "cat /etc/car-rent-*.env || true"
+```
+
+---
+
+## Running Playbooks
+
+After creating the required Ansible playbooks and roles, run them using the same inventory:
+
+```bash
+ansible-playbook -i inventories/aws_ec2.yml playbooks/site.yml
+```
+
+Or run any specific playbook:
+
+```bash
+ansible-playbook -i inventories/aws_ec2.yml playbooks/<playbook-name>.yml
+```
+
+---
+
+## Integration Summary
+
+```text
+Connection method: AWS SSM
+SSH required: No
+Bastion required: No
+Public IP required: No
+Inventory source: AWS EC2 dynamic inventory
+Temporary payload bucket: car-rent-dev-ansible-ssm-emad
+AWS profile: project
+Region: us-east-1
+```
+
