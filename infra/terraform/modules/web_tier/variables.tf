@@ -22,3 +22,10 @@ variable "aws_region" {
   description = "AWS region used to select the AMI"
   type        = string
 }
+variable "app_backend_url" {
+  type = string
+}
+variable "iam_instance_profile_name" {
+  type    = string
+  default = null
+}
