@@ -26,5 +26,6 @@ resource "aws_instance" "web_server" {
     Name          = "${var.project_name}-${var.environment}-web-${count.index + 1}"
     Environment   = var.environment
     AppBackendURL = var.app_backend_url
+    Tier        = "web"
   }
 }
