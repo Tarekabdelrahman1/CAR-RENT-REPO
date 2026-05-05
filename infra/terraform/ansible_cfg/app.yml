@@ -1,0 +1,56 @@
+---
+- name: Deploy Backend to App Tier
+  hosts: tier_app
+  connection: community.aws.aws_ssm
+  become: yes
+  become_user: root
+  gather_facts: no
+  vars:
+    ansible_aws_ssm_bucket_name: "car-rent-dev-ansible-ssm-emad"
+    ansible_shell_type: "sh"
+
+  tasks:
+    - name: EMERGENCY FIX - Disable bracketed paste
+      raw: |
+        echo "set enable-bracketed-paste off" >> /etc/inputrc
+        export TERM=dumb
+      ignore_errors: yes
+
+    - name: Gather facts
+      setup:
+
+    - name: Install Node.js, npm, and Git
+      package:
+        name: 
+          - nodejs
+          - npm
+          - git
+        state: present
+
+    - name: Create backend directory
+      file:
+        path: /var/www/backend
+        state: directory
+        mode: '0755'
+
+    - name: Clone Backend Code from Git
+      git:
+        repo: 'حط_لينك_الباك_هنا'   # <--- حط لينك الريبو الـ Public هنا 
+        dest: /var/www/backend/
+        version: main               # لو البرانش بتاعك اسمه master غيرها
+        force: yes
+
+    - name: Install Application Dependencies
+      npm:
+        path: /var/www/backend/
+
+    - name: Install PM2 globally
+      npm:
+        name: pm2
+        global: yes
+
+    - name: Start Backend App with PM2
+      command: pm2 start index.js --name "car-rent-backend" # لو الملف الرئيسي اسمه مختلف عن index.js غيره هنا
+      args:
+        chdir: /var/www/backend/
+      ignore_errors: yes
