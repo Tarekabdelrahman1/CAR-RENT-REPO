@@ -25,3 +25,7 @@ variable "aws_region" {
 variable "app_backend_url" {
   type = string
 }
+variable "iam_instance_profile_name" {
+  type    = string
+  default = null
+}
