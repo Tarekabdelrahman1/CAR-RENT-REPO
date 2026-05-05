@@ -157,4 +157,14 @@ module "public_alb" {
   target_ids  = module.web_tier.web_instance_ids
   target_port = 80
 }
+# =========================
+# Ansible SSM Bucket
+# =========================
+module "ansible_ssm" {
+  source = "../../modules/ansible_ssm"
 
+  project_name = "car-rent"
+  environment  = "dev"
+
+  bucket_name = "car-rent-dev-ansible-ssm-emad"
+}
