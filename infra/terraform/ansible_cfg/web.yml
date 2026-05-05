@@ -1,0 +1,45 @@
+---
+- name: Deploy Frontend to Web Tier
+  hosts: tier_web
+  connection: community.aws.aws_ssm
+  become: yes
+  become_user: root
+  gather_facts: no
+  vars:
+    ansible_aws_ssm_bucket_name: "car-rent-dev-ansible-ssm-emad"
+    ansible_shell_type: "sh"
+
+  tasks:
+    - name: EMERGENCY FIX - Disable bracketed paste
+      raw: |
+        echo "set enable-bracketed-paste off" >> /etc/inputrc
+        export TERM=dumb
+      ignore_errors: yes
+
+    - name: Gather facts
+      setup:
+
+    - name: Install Nginx and Git
+      package:
+        name: 
+          - nginx
+          - git
+        state: present
+
+    - name: Ensure Nginx is running
+      service:
+        name: nginx
+        state: started
+        enabled: yes
+
+    - name: Remove default Nginx index.html
+      file:
+        path: /usr/share/nginx/html/index.html
+        state: absent
+
+    - name: Clone Frontend Code from Git
+      git:
+        repo: 'put the link of the repo here'  
+        dest: /usr/share/nginx/html/
+        version: main                 
+        force: yes
