@@ -35,9 +35,9 @@
 
     - name: Clone Backend Code from Git
       git:
-        repo: 'حط_لينك_الباك_هنا'   # <--- حط لينك الريبو الـ Public هنا 
+        repo:'link of repo'
         dest: /var/www/backend/
-        version: main               # لو البرانش بتاعك اسمه master غيرها
+        version: main               
         force: yes
 
     - name: Install Application Dependencies
@@ -50,7 +50,7 @@
         global: yes
 
     - name: Start Backend App with PM2
-      command: pm2 start index.js --name "car-rent-backend" # لو الملف الرئيسي اسمه مختلف عن index.js غيره هنا
+      command: pm2 start index.js --name "car-rent-backend" 
       args:
         chdir: /var/www/backend/
       ignore_errors: yes
