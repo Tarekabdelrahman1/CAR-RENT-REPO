@@ -1,0 +1,20 @@
+---
+- name: Deploy Backend to App Tier
+  hosts: tier_app
+  become: yes
+  become_user: root
+  gather_facts: no
+  pre_tasks:
+    - name: Disable bracketed paste
+      raw: |
+        echo "set enable-bracketed-paste off" >> /etc/inputrc
+        export TERM=dumb
+      ignore_errors: yes
+    - name: Gather facts
+      setup:
+  roles:
+    - role: docker_setup
+    - role: backend_deploy
+      vars:
+        docker_image_name: "assemragab105/carrento-backend"
+        docker_image_tag: "latest"

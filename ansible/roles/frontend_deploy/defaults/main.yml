@@ -1,0 +1,5 @@
+---
+docker_image_name: "assemragab105/carrento-frontend"
+docker_image_tag: "latest"
+container_name: "carrento-frontend"
+container_port: 80
