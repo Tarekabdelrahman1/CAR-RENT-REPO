@@ -1,3 +1,0 @@
----
-- import_playbook: playbooks/app.yml
-- import_playbook: playbooks/web.yml
