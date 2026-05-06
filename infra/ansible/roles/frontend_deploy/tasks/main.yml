@@ -1,0 +1,36 @@
+---
+- name: Pull frontend image from Docker Hub
+  command: "docker pull {{ docker_image_name }}:{{ docker_image_tag }}"
+
+- name: Get internal ALB DNS dynamically from AWS
+  command: >
+    aws elbv2 describe-load-balancers
+    --region us-east-1
+    --query "LoadBalancers[?Scheme=='internal'].DNSName"
+    --output text
+  register: internal_alb_dns
+  delegate_to: localhost
+  become: no
+
+- name: Remove old container
+  command: "docker rm -f {{ container_name }}"
+  ignore_errors: yes
+
+- name: Run frontend container
+  command: >
+    docker run -d
+    --name {{ container_name }}
+    --restart unless-stopped
+    -p {{ container_port }}:80
+    -e VITE_API_URL=/api
+    -e INTERNAL_ALB_URL=http://{{ internal_alb_dns.stdout | trim }}
+    {{ docker_image_name }}:{{ docker_image_tag }}
+
+- name: Wait for frontend to be healthy
+  uri:
+    url: "http://127.0.0.1:{{ container_port }}"
+    status_code: [200, 304]
+  register: health
+  retries: 10
+  delay: 3
+  until: health.status is defined
