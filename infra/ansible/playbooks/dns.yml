@@ -1,0 +1,7 @@
+---
+- name: Update Cloudflare DNS to point to Public ALB
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  roles:
+    - role: cloudflare_dns

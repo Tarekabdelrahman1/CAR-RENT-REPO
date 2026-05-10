@@ -1,0 +1,4 @@
+---
+cloudflare_subdomain: "carrent"
+cloudflare_domain: "marsxc.me"
+cloudflare_proxied: true
