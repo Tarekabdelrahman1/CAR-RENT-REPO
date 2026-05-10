@@ -1,0 +1,84 @@
+---
+- name: Fetch Cloudflare API token from Parameter Store
+  command: >
+    aws ssm get-parameter
+    --name "/carrento/dev/cloudflare-api-token"
+    --with-decryption
+    --region us-east-1
+    --query Parameter.Value
+    --output text
+  register: cf_token
+  delegate_to: localhost
+  become: no
+
+- name: Fetch Cloudflare Zone ID from Parameter Store
+  command: >
+    aws ssm get-parameter
+    --name "/carrento/dev/cloudflare-zone-id"
+    --with-decryption
+    --region us-east-1
+    --query Parameter.Value
+    --output text
+  register: cf_zone_id
+  delegate_to: localhost
+  become: no
+
+- name: Get Public ALB DNS from AWS
+  command: >
+    aws elbv2 describe-load-balancers
+    --region us-east-1
+    --query "LoadBalancers[?Scheme=='internet-facing'].DNSName"
+    --output text
+  register: public_alb_dns
+  delegate_to: localhost
+  become: no
+
+- name: Check if DNS record already exists
+  uri:
+    url: "https://api.cloudflare.com/client/v4/zones/{{ cf_zone_id.stdout | trim }}/dns_records?type=CNAME&name={{ cloudflare_subdomain }}.{{ cloudflare_domain }}"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ cf_token.stdout | trim }}"
+      Content-Type: "application/json"
+    status_code: 200
+  register: existing_record
+  delegate_to: localhost
+  become: no
+
+- name: Create DNS record if it does not exist
+  uri:
+    url: "https://api.cloudflare.com/client/v4/zones/{{ cf_zone_id.stdout | trim }}/dns_records"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ cf_token.stdout | trim }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      type: "CNAME"
+      name: "{{ cloudflare_subdomain }}"
+      content: "{{ public_alb_dns.stdout | trim }}"
+      ttl: 1
+      proxied: "{{ cloudflare_proxied }}"
+    status_code: 200
+  when: existing_record.json.result_info.count == 0
+  delegate_to: localhost
+  become: no
+
+- name: Update DNS record if it already exists
+  uri:
+    url: "https://api.cloudflare.com/client/v4/zones/{{ cf_zone_id.stdout | trim }}/dns_records/{{ existing_record.json.result[0].id }}"
+    method: PUT
+    headers:
+      Authorization: "Bearer {{ cf_token.stdout | trim }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      type: "CNAME"
+      name: "{{ cloudflare_subdomain }}"
+      content: "{{ public_alb_dns.stdout | trim }}"
+      ttl: 1
+      proxied: "{{ cloudflare_proxied }}"
+    status_code: 200
+  when: existing_record.json.result_info.count > 0
+  delegate_to: localhost
+  become: no
