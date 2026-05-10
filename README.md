@@ -1,5 +1,8 @@
 # 🚗 CAR-RENT: Enterprise-Grade AWS Cloud Architecture
 
+<img width="2816" height="1536" alt="Gemini_Generated_Image_70dkru70dkru70dk" src="https://github.com/user-attachments/assets/2fad8a01-6f95-4a16-ae9d-faf8850bbc91" />
+
+
 <img width="1884" height="862" alt="Screenshot 2026-05-09 232128" src="https://github.com/user-attachments/assets/43fae64e-368c-4ac8-9d52-bec9abc2d337" />
 
 ## 📌 Overview
